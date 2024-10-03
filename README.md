@@ -1,7 +1,4 @@
-![image](https://github.com/user-attachments/assets/f1782e37-0c8d-448e-a4fb-5ec0425225b9)Here's a detailed explanation for a GitHub `README.md`:
-
 ---
-
 # Production Report Generator
 
 This Python project is designed to generate daily and monthly production reports for different production lines in a factory setting. It processes production data such as products worked, time spent, and quantities produced, and outputs insightful visual and textual reports, including production rate per hour, total output, and other performance metrics. The results can be saved in various formats, such as images and text files.
@@ -47,7 +44,7 @@ This Python project is designed to generate daily and monthly production reports
    - Data can be loaded from Excel files located in the `reports/` directory. The user is prompted to select daily or monthly reporting and to provide file names.
    - The data is parsed and processed into a pandas DataFrame for analysis.
    - The data must have the following columns:
-   - Line	Order	Product	DateBeginning	TimeBeginning	DateEnd	TimeEnd	RealDuration(Min)	PauseDuration	RealDuration(Min)WithPauses	Boxes	Workers	W/P/H	W/P/H WP
+![image](https://github.com/user-attachments/assets/f1782e37-0c8d-448e-a4fb-5ec0425225b9)Here's a detailed explanation for a GitHub `README.md`:
 
 
 - **Output**:
