@@ -101,5 +101,3 @@ The monthly report will compare average WPH across all products and production l
 - openpyxl
 
 ---
-
-This explanation provides a comprehensive overview of the project for a potential user or collaborator on GitHub.
