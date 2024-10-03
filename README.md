@@ -44,7 +44,7 @@ This Python project is designed to generate daily and monthly production reports
    - Data can be loaded from Excel files located in the `reports/` directory. The user is prompted to select daily or monthly reporting and to provide file names.
    - The data is parsed and processed into a pandas DataFrame for analysis.
    - The data must have the following columns:
-![image](https://github.com/user-attachments/assets/f1782e37-0c8d-448e-a4fb-5ec0425225b9)Here's a detailed explanation for a GitHub `README.md`:
+![image](https://github.com/user-attachments/assets/f1782e37-0c8d-448e-a4fb-5ec0425225b9)
 
 
 - **Output**:
