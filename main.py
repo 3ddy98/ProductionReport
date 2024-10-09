@@ -8,6 +8,7 @@ from datetime import timedelta
 from datetime import datetime as dt2
 import matplotlib.dates as mdates
 import os
+from matplotlib.backends.backend_pdf import PdfPages
 pd.options.mode.chained_assignment = None
 
 
@@ -49,34 +50,46 @@ class Production_Line:
 		for product in self.products_worked:
 			product.print_product_data()
 
-def generate_line_report(prod_line,line_ID,hours_worked):
+def calculateBunches(main_df):
+	product_index = pd.read_csv('bunches_index.csv')
+	main_df = main_df.merge(product_index,on='Product',how='left')
+	main_df['Bunches'] = main_df['PK']*main_df['Boxes']
+	return main_df
+
+def generate_line_report(prod_line,line_ID,hours_worked,total_employees,pdf):
 	#prod_line['RealDuration(Min)'] = prod_line['RealDuration(Min)'].str.replace(',','')
+
+	leaders = 1
+	line_employees = total_employees - leaders
+	empolyee_hourly_wage = 16
+	leader_hourly_wage = 16.5
+
+	
 
 	prod_line['Boxes'] = prod_line['Boxes'].astype('float64')
 	prod_line['RealDuration(Min)'] = prod_line['RealDuration(Min)'].astype('float32')
-	prod_line['Workers']= prod_line['Workers'].astype('float64')
-
-	prod_line['WPH'] = np.where(prod_line['Boxes'] <= 0,0,prod_line['Boxes']/prod_line['RealDuration(Min)'])
-	prod_line['WPH'] = round(prod_line['WPH'] * 60,0)
-
-	prod_line['WPH/Person'] = np.where(prod_line['Workers']<=0,0,(prod_line['WPH']/prod_line['Workers']))
+	prod_line['Workers']= total_employees
+	prod_line['WPH'] = (prod_line['Boxes']/prod_line['RealDuration(Min)'])*60
+	prod_line['WPH/Person'] = prod_line['WPH']/total_employees
 	prod_line['Boxes Produced'] = prod_line['Boxes'].cumsum()
-
 	prod_line["TimeEnd"] = pd.to_datetime(prod_line["TimeEnd"],format="%H:%M:%S")
+	prod_line["Bunches"] = prod_line["Bunches"].astype('float32')
 
 	#Summary Data
 	max_WPH = prod_line["WPH"].max()
 	min_WPH = prod_line["WPH"].min()
+	bunches_produced = prod_line['Bunches'].sum()
 	avg_WPH = round(prod_line["WPH"].mean(),1)
 	std_dev = round(prod_line["WPH"].std(),1)
 	total_worked = prod_line["Boxes"].sum()
 	skus_worked = len(prod_line["Product"])
 	fastest_prod = prod_line.loc[prod_line["WPH"]==max_WPH]["Product"]
 	slowest_prod = prod_line.loc[prod_line["WPH"]==min_WPH]["Product"]
-
 	table1 = prod_line[['TimeEnd','RealDuration(Min)','Product','Boxes']]
 	table2 = prod_line[['TimeEnd','Product','WPH']]
-
+	approx_line_payroll = ((leaders*leader_hourly_wage) + (line_employees*empolyee_hourly_wage))*hours_worked
+	approx_dollar_wp = round(approx_line_payroll/total_worked,2)
+	approx_dollar_bunch = round(approx_line_payroll/bunches_produced,2)
 	
 
 	#plotting Boxes Made
@@ -95,13 +108,15 @@ def generate_line_report(prod_line,line_ID,hours_worked):
 		target_avg_wph_2 = 110
 		target = hours_worked * target_avg_wph_2
 	elif line_ID == "CXLINE3":
-		target_avg_wph_3 = 150
+		target_avg_wph_3 = 130
 		target = hours_worked * target_avg_wph_3
 	elif line_ID == "CXLINE4":
-		target_avg_wph_4 = 150
+		target_avg_wph_4 = 130 #in the future should calculate using historical values
 		target = hours_worked * target_avg_wph_4
 
+	diff = total_worked-target
 	data = pd.DataFrame([
+		["Production Line",line_ID],
 		["Fastest Product",fastest_prod.values[0]],
 		["Max WPH",max_WPH],
 		["Slowest Product", slowest_prod.values[0]],
@@ -110,12 +125,17 @@ def generate_line_report(prod_line,line_ID,hours_worked):
 		["STD Dev", std_dev],
 		["SKUs Worked",skus_worked],
 		["Hours Worked",hours_worked],
-		["Production Goal: ",target],
-		["Total Produced",total_worked],
-		["Difference to Goal: ",total_worked-target]
-		],columns=["Label","Values"])
+		["Employees", total_employees],
+		["Production Goal",target],
+		["Total Wetpacks Produced",total_worked],
+		["Difference to Goal",diff],
+		["Bunches Produced",bunches_produced],
+		["Approx $/WP",approx_dollar_wp],
+		["Approx $/Bunch",approx_dollar_bunch]
+		],columns=["Date",prod_line["DateBeginning"].min()])
 
-	print("Target: ",target)
+	summary = pd.DataFrame(np.array([[line_ID,fastest_prod.values[0],max_WPH,slowest_prod.values[0],min_WPH,avg_WPH,std_dev,skus_worked,hours_worked,total_employees,target,total_worked,diff,bunches_produced,approx_dollar_wp,approx_dollar_bunch]]),columns=['Production Line','Fastest Product','Max WPH','Slowest Product','Min WPH','Average WPH','STD Dev','SKUs Worked','Hours Worked','Employees','Production Goal','Total Wetpacks Produced','Difference to Goal','Bunches Produced','Approx $/WP','Approx $/Bunch'])
+
 	#plotting total worked
 	ax1 = fig.add_subplot(2,2,1)
 	ax1.grid(visible=True)
@@ -123,11 +143,11 @@ def generate_line_report(prod_line,line_ID,hours_worked):
 	p1 = ax1.plot(prod_line["TimeEnd"],prod_line['Boxes Produced'],"D",linestyle='solid')
 	ax1.plot([min(timerange),max(timerange)],[target,target])
 	for x, y, text in zip (prod_line["TimeEnd"],prod_line['Boxes Produced'],prod_line['Boxes Produced']):
-		ax1.text(x,y,text)
+		ax1.text(x,y+200,text,rotation='vertical')
 
 	ax1.set_ylim(top = 3000,bottom=0)
 	ax1.set_xlim(timerange.min(),timerange.max())
-	#ax1.set_xticklabels(timerange,rotation = 45,fontsize="xx-small")
+	ax1.set_xticklabels(timerange,rotation = 45,fontsize="xx-small")
 	ax1.set_title("Day Production ")
 
 
@@ -143,7 +163,7 @@ def generate_line_report(prod_line,line_ID,hours_worked):
 	ax3.set_ylim(top = 300,bottom=0)
 	#ax3.set_xticks(timerange)
 	ax3.set_xlim(min(timerange),max(timerange))	
-	#ax3.set_xticklabels(timerange, rotation=45,fontsize="xx-small")
+	ax3.set_xticklabels(timerange, rotation=45,fontsize="xx-small")
 	ax3.set_title("Wetpacks Per Hour")
 	
 	#plotting products worked
@@ -151,8 +171,6 @@ def generate_line_report(prod_line,line_ID,hours_worked):
 	ax2.axis('off')
 	ax2.axis('tight')
 	p2 = ax2.table(cellText=table1.values,colLabels=table1.columns,loc="center")
-	p2.auto_set_font_size(True)
-
 	p2.set_fontsize(10)
 
 	#plotting products worked
@@ -178,10 +196,10 @@ def generate_line_report(prod_line,line_ID,hours_worked):
                     top=0.9, 
                     wspace=0.1, 
                     hspace=0.3)
-	filename = line_ID +" - "+ str(date)[1:10]+  '.png'
-	plt.savefig('DailyReport/'+filename,dpi=300)
-
-	with open("Report.txt","a") as f:
+	filename = line_ID +" - "+ str(date)[1:10]
+	pdf.savefig(fig)
+	
+	'''with open("Report"+str(date)[1:10]+".txt","a") as f:
 		f.write(50*"-")
 		f.write("\n")
 		f.write(line_ID)
@@ -190,7 +208,8 @@ def generate_line_report(prod_line,line_ID,hours_worked):
 		f.write("\n")
 		f.write(50*"-")
 		f.write(4*"\n")
-		f.close()
+		f.close()'''
+	return [prod_line.drop(columns=['Boxes Produced','W/P/H','W/P/H WP']),summary]
 
 def get_prod_line_dfs(df,line_IDs):
 	prod_lines_dfs= []
@@ -285,14 +304,28 @@ def main():
 		elif selection == 2:	
 			print("Input Filename: ",end='')
 			file = str(input())
-			main_df = pd.read_excel(file)
+			main_df = pd.read_excel('DAILY/INPUT/'+file)
+			main_df = calculateBunches(main_df)
 			line_IDs = main_df["Line"].unique()
 			prod_lines_dfs = get_prod_line_dfs(main_df,line_IDs)
 			#generate report
-			for x in range(len(prod_lines_dfs)):
-				print("{} Hours Work: ".format(line_IDs[x]))
-				hours_worked = float(input())
-				generate_line_report(prod_lines_dfs[x],line_IDs[x],hours_worked)
+			report_df = pd.DataFrame()
+			summary_df = pd.DataFrame()
+			date = str(main_df['DateBeginning'].min())[0:10]
+			with PdfPages('DAILY/OUT PDF/Report-'+date+'.pdf') as pdf:
+				for x in range(len(prod_lines_dfs)):
+					print("{} Hours Work: ".format(line_IDs[x]))
+					hours_worked = float(input())
+					print("{} Employees: ".format(line_IDs[x]))
+					line_employees = float(input())
+					temp_report_df,temp_summary_df = generate_line_report(prod_lines_dfs[x],line_IDs[x],hours_worked,line_employees,pdf)
+					report_df = pd.concat([report_df,temp_report_df],ignore_index=True)
+					summary_df = pd.concat([summary_df,temp_summary_df],ignore_index=True)
+			print(report_df.to_string())
+			print(summary_df.to_string())
+			report_df.to_csv('DAILY/OUT PROD REPORT/Report-'+date+'.csv')
+			summary_df.to_csv('DAILY/OUT SUMMARY REPORT/SUMMARY-'+date+'.csv')
+
 		elif selection == 3:
 			break;
 		#except:
