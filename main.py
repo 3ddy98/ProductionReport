@@ -306,6 +306,7 @@ def main():
 			file = str(input())
 			main_df = pd.read_excel('DAILY/INPUT/'+file)
 			main_df = calculateBunches(main_df)
+			main_df['Line'] = main_df['Line'].astype(str)
 			line_IDs = main_df["Line"].unique()
 			prod_lines_dfs = get_prod_line_dfs(main_df,line_IDs)
 			#generate report
