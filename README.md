@@ -1,3 +1,5 @@
+![image](https://github.com/user-attachments/assets/ab6202a5-5860-4af0-82c5-8305b429bf65)
+
 ---
 # Production Report Generator
 
@@ -62,7 +64,7 @@ This Python project is designed to generate daily and monthly production reports
 3. Prepare your production data in CSV/Excel format.
 4. Run the script:
    ```bash
-   python production_report.py
+   main.py
    ```
 5. Choose whether you want to generate a daily or monthly report:
    - **Option 1**: Monthly report
@@ -87,7 +89,7 @@ The monthly report will compare average WPH across all products and production l
 ```
 ├── DailyReport/          # Contains saved daily report images
 ├── Report.txt            # Contains text summary of the reports
-├── production_report.py   # Main Python script for generating reports
+├── main.py   # Main Python script for generating reports
 ├── reports/              # Directory where your input Excel files are located
 └── README.md             # This readme file
 ```
